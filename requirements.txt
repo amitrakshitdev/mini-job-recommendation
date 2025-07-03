@@ -1,0 +1,5 @@
+fastapi
+uvicorn
+patchright
+loguru
+beautifulsoup4
