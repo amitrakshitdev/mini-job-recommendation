@@ -8,6 +8,9 @@ import os
 import asyncio
 from typing import List, Dict, Any
 
+from scrapers.naukri_scraper import main as scrap_naukri
+
+
 # Initialize FastAPI app
 app = FastAPI(
     title="Job Recommendation System API",
@@ -53,35 +56,14 @@ async def read_root():
 @app.post("/scrape-jobs")
 async def scrape_jobs():
     """
-    Triggers the Scrapy spider to scrape job listings.
+    Triggers the naukri scraping process using playright.
     Note: In a production environment, you might want to run this as a scheduled task
     or a separate microservice rather than directly via an API endpoint,
     especially for long-running scraping jobs.
     """
     try:
-        # Change to the Scrapy project directory
-        # This assumes your Scrapy project is located at ./scrapy_project relative to main.py
-        scrapy_project_path = "./scrapy_project"
-        if not os.path.exists(scrapy_project_path):
-            raise HTTPException(status_code=500, detail="Scrapy project directory not found.")
-
-        # Run the Scrapy spider as a subprocess
-        # 'naukri' is the name of your spider. You can add more spiders or parameters.
-        # '-o jobs.json' can be used to output to a file, but we'll integrate with DB later.
-        process = await asyncio.create_subprocess_exec(
-            "scrapy", "crawl", "naukri", "-o", "jobs-naukri.json",
-            cwd=scrapy_project_path, # Set the current working directory for the subprocess
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
-        stdout, stderr = await process.communicate()
-
-        if process.returncode != 0:
-            print(f"Scrapy Error: {stderr.decode()}")
-            raise HTTPException(status_code=500, detail=f"Scrapy failed: {stderr.decode()}")
-
-        print(f"Scrapy Output: {stdout.decode()}")
-        return {"message": "Scraping initiated successfully!", "output": stdout.decode()}
+       await scrap_naukri()
+       return {"message": "Scraping initiated successfully!"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to initiate scraping: {str(e)}")
 
@@ -150,58 +132,6 @@ async def upload_resume(file: UploadFile = File(...)):
         # Clean up the temporary file
         if os.path.exists(file_location):
             os.remove(file_location)
-
-
-# --- Scrapy Project Structure Placeholder ---
-# In your project, you would create a directory named 'scrapy_project'
-# and initialize a Scrapy project inside it.
-# Example structure:
-# .
-# ├── main.py
-# └── scrapy_project/
-#     ├── scrapy.cfg
-#     ├── scrapy_project/
-#     │   ├── __init__.py
-#     │   ├── items.py
-#     │   ├── middlewares.py
-#     │   ├── pipelines.py
-#     │   └── settings.py
-#     └── spiders/
-#         └── naukri_spider.py
-
-# Example content for scrapy_project/spiders/naukri_spider.py:
-"""
-import scrapy
-
-class NaukriSpider(scrapy.Spider):
-    name = 'naukri'
-    start_urls = ['https://www.naukri.com/python-jobs'] # Example URL
-
-    def parse(self, response):
-        # This is a highly simplified example.
-        # You'll need to inspect Naukri's HTML/JS to extract actual job data.
-        # Use CSS selectors or XPath to extract job title, company, description, etc.
-        for job_card in response.css('.jobTuple'): # Example selector, needs verification
-            yield {
-                'title': job_card.css('.jobTupleHeader .title::text').get(),
-                'company': job_card.css('.jobTupleHeader .companyInfo .companyName::text').get(),
-                'location': job_card.css('.jobTupleFooter .location::text').get(),
-                'description': ''.join(job_card.css('.jobDescriptionContent::text').getall()).strip(),
-                'url': response.urljoin(job_card.css('.jobTupleHeader .title::attr(href)').get()),
-            }
-
-        # Follow pagination links if available
-        next_page = response.css('.pagination .next::attr(href)').get()
-        if next_page is not None:
-            yield response.follow(next_page, self.parse)
-"""
-
-# To initialize a Scrapy project:
-# 1. Create a directory named `scrapy_project` in the same level as `main.py`.
-# 2. Navigate into `scrapy_project` in your terminal.
-# 3. Run `scrapy startproject scrapy_project .` (the dot means create project in current dir).
-# 4. Navigate into `scrapy_project/spiders`.
-# 5. Create `naukri_spider.py` (or whatever name you choose) and paste the spider code.
 
 # To run this FastAPI app locally (for testing without Docker yet):
 # 1. Make sure you have FastAPI and Uvicorn installed:

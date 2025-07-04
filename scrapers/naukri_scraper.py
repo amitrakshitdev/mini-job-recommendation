@@ -6,6 +6,7 @@ import json
 import os
 import csv
 from pathlib import Path
+from nanoid import generate
 
 curr_dir = Path(__file__).resolve().parent.parent / "user_data"
 
@@ -14,8 +15,8 @@ sys.path.append("../")
 
 async def __get_job_description__(browser, job_data, index):
     page = await browser.new_page()
-    job = job_data[index]
-    await page.goto(job["link"], timeout=30000)
+    link = job_data[index]["link"]
+    await page.goto(link, timeout=30000)
     await page.wait_for_selector("section[class^=styles_job-desc-container]")
     job_description_element = page.locator('section[class^=styles_job-desc-container]').first
     key_skills_elements = await job_description_element.locator('div[class^="styles_key-skill"] > div > a > span').all()
@@ -24,8 +25,10 @@ async def __get_job_description__(browser, job_data, index):
         key_skill = await key_skill_element.text_content()
         key_skills.append(key_skill.strip())
     job_data[index]["key_skills"] = key_skills
-
-    return (job, index)
+    jd_inner_html = await job_description_element.locator("div[class^='styles_JDC__dang-inner-html']").first.inner_html()
+    job_data[index]["job_description"] = jd_inner_html.strip()
+    await page.close()
+    return (job_data[index], index)
 
 async def scrape_naukri(url, page_number=1):
     async with async_playwright() as p:
@@ -54,7 +57,6 @@ async def scrape_naukri(url, page_number=1):
                     title = await title_element.text_content() if title_element else "N/A"
                     
                     link = await title_element.get_attribute("href") if title_element else "N/A"
-                    print(link) 
 
                     company_element = job.locator('a.comp-name').first
                     company = await company_element.text_content() if company_element else "N/A"
@@ -69,6 +71,7 @@ async def scrape_naukri(url, page_number=1):
 
                     
                     job_details = {
+                        "id": generate(size=15),
                         "title": title.strip(),
                         "company": company.strip(),
                         "location": location.strip(),
@@ -93,10 +96,9 @@ async def scrape_naukri(url, page_number=1):
             # Save to JSON
             file_path = "data/naukri_output.json"
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
-            for i in range(1, page_number + 1):
-                file_path = f"data/naukri_output_{i}.json"
-                with open(file_path, "w", encoding="utf-8") as json_file:
-                    json.dump(job_data, json_file, indent=4)
+            file_path = f"data/naukri_output_{page_number}.json"
+            with open(file_path, "w", encoding="utf-8") as json_file:
+                json.dump(job_data, json_file, indent=4)
 
 
         except Exception as e:
@@ -116,6 +118,11 @@ def merge_jsons_into_one(directory, file_prefix, range_start, range_end):
     output_file_path = f"{directory}/{file_prefix}_merged.json"
     with open(output_file_path, "w", encoding="utf-8") as output_file:
         json.dump(merged_data, output_file, indent=4)
+    
+    for i in range(range_start, range_end + 1):
+        os.remove(f"{directory}/{file_prefix}_{i}.json")
+
+
 
 
 
@@ -196,10 +203,12 @@ def clean_and_format_job_description(html_content):
 
 async def main():
     url = "https://www.naukri.com/software-engineering-jobs"
+    start_page = 1
     how_many_pages = 5
-    # for i in range(1, how_many_pages + 1):
-    #     await scrape_naukri(url, i)
-    merge_jsons_into_one("data", "naukri_output", 1, how_many_pages)
+    for i in range(start_page, how_many_pages + 1):
+        await scrape_naukri(url, i)
+        print(f"Scraped page {i}")
+    merge_jsons_into_one("data", "naukri_output", start_page, how_many_pages)
 
 
 
