@@ -210,9 +210,5 @@ async def main():
         print(f"Scraped page {i}")
     merge_jsons_into_one("data", "naukri_output", start_page, how_many_pages)
 
-
-
-
-
 if __name__ == '__main__':
     asyncio.run(main())

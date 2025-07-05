@@ -1,14 +1,20 @@
 # main.py
 # This file contains the FastAPI application setup and integration points for Scrapy.
 
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Request
 from pydantic import BaseModel
 import subprocess
 import os
 import asyncio
 from typing import List, Dict, Any
-
+from db.db_client import DatabaseClient
+from db.jobs_schema import JobDocument
 from scrapers.naukri_scraper import main as scrap_naukri
+from llm.gemini import GeminiClient
+from utils.string_utils import get_list_from_string
+from bson import ObjectId
+
+
 
 
 # Initialize FastAPI app
@@ -20,8 +26,13 @@ app = FastAPI(
 
 # --- Pydantic Models for API Request/Response ---
 
-class JobQuery(BaseModel):
-    query: str
+class JobQueryBody(BaseModel):
+    title: str
+    company: str
+    location: str
+    experience: str
+    post_date: str
+    key_skills: List[str]
 
 class JobPost(BaseModel):
     id: str
@@ -42,8 +53,8 @@ class RecommendationResponse(BaseModel):
 # In a real application, you'd use SQLAlchemy (for PostgreSQL) or PyMongo (for MongoDB)
 # and initialize connections here or via dependency injection.
 # For now, these are just placeholders.
-db_client = None # Placeholder for database client (e.g., PostgreSQL or MongoDB)
-
+db_client = DatabaseClient(db_name="JobReco")
+gemini = GeminiClient()
 # --- API Endpoints ---
 
 @app.get("/")
@@ -66,23 +77,43 @@ async def scrape_jobs():
        return {"message": "Scraping initiated successfully!"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to initiate scraping: {str(e)}")
+    
+@app.post("/user-query")
+async def user_query(request: Request):
+    body = await request.json()
+    print(f"Received user query:", body)
+    response = await gemini.get_jobs_by_agent(body["query"])
+    output_string = ''
+    if "output" in response:
+        output_string = response["output"]
+    jobs_id_list = get_list_from_string(output_string)
+    jobs_object_id_list = list(map(lambda id: ObjectId(id), jobs_id_list))
+    jobs_data = db_client.run_query("Jobs", {"_id": {"$in": jobs_object_id_list}})
+    response = {"data": jobs_data,
+            "count": len(jobs_data)}
+    if len(jobs_id_list) == 0:
+        response = {"data": [], 
+                    "count": 0, 
+                    "message" : output_string}
+    return response
+    
 
 @app.post("/jobs/search")
-async def search_jobs(query: JobQuery) -> List[JobPost]:
+async def search_jobs(body: JobQueryBody) -> List[Any]:
     """
     Searches for jobs based on a user query using the LLM/NLP module and vector similarity.
-    """
-    # Placeholder for actual logic:
-    # 1. Use LLM/NLP module to process 'query.query' and generate its embedding.
-    # 2. Perform vector similarity search in your database (PostgreSQL with pgvector).
-    # 3. Retrieve matching job posts.
-    print(f"Searching for jobs with query: {query.query}")
-    # Mock data for demonstration
-    mock_jobs = [
-        JobPost(id="1", title="Software Engineer", company="Tech Corp", location="Bangalore", description="Develop software.", url="http://example.com/job1"),
-        JobPost(id="2", title="Data Scientist", company="Data Inc", location="Mumbai", description="Analyze data.", url="http://example.com/job2")
-    ]
-    return mock_jobs
+    """ 
+    print(f"Searching for jobs with query: {body}")
+    query = {
+        "title": body.title,
+        "company": body.company,
+        "location": body.location,
+        "experience": body.experience,
+        "post_date": body.post_date,
+        "key_skills": body.key_skills
+    }
+    search_results: List[JobDocument] = db_client.run_query("Jobs", query)
+    return search_results
 
 @app.post("/jobs/{job_id}/recommend-similar")
 async def recommend_similar_jobs(job_id: str) -> RecommendationResponse:
