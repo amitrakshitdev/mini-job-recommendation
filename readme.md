@@ -62,7 +62,7 @@ The output should look like the following:
     "count": 6
 }
 ```
-2. Hit the following endpoint as ```http://localhost:3015/resume/upload``` with a resume.pdf file attached as a form-data payload.
+2. Hit the following endpoint as ```http://localhost:3015/resume/upload``` with a resume.pdf file attached as a form-data payload. A sample resume can be found inside ```data/resume-sample``` directory.
 It will return something like the following.
 ```json
 {
@@ -145,4 +145,4 @@ It will return something like the following.
 3. The Job scoring mechanism is there but not fully functional so not implemented.
 4. The similar job recommendation is yet to be implemented.
 
-# Thank you. Will keep on improving and implementing the other things.
+Thank you. Will keep on improving and implementing the other things.
