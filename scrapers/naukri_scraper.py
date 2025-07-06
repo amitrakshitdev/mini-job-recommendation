@@ -7,7 +7,7 @@ import os
 import csv
 from pathlib import Path
 from nanoid import generate
-# from utils.string_utils import parse_experience_string
+from utils.string_utils import parse_experience_string
 curr_dir = Path(__file__).resolve().parent.parent / "user_data"
 
 sys.path.append("../")
