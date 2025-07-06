@@ -7,7 +7,7 @@ import os
 import csv
 from pathlib import Path
 from nanoid import generate
-
+# from utils.string_utils import parse_experience_string
 curr_dir = Path(__file__).resolve().parent.parent / "user_data"
 
 sys.path.append("../")
@@ -16,7 +16,7 @@ sys.path.append("../")
 async def __get_job_description__(browser, job_data, index):
     page = await browser.new_page()
     link = job_data[index]["link"]
-    await page.goto(link, timeout=30000)
+    await page.goto(link, timeout=60000)
     await page.wait_for_selector("section[class^=styles_job-desc-container]")
     job_description_element = page.locator('section[class^=styles_job-desc-container]').first
     key_skills_elements = await job_description_element.locator('div[class^="styles_key-skill"] > div > a > span').all()
@@ -66,7 +66,12 @@ async def scrape_naukri(url, page_number=1):
 
                     experience_element = job.locator('span.expwdth').first
                     experience = await experience_element.text_content() if experience_element else "N/A"
-                    
+                    parsed_experence = parse_experience_string(experience)
+                    exp_str = parsed_experence["experience_raw"]
+                    exp_min_yrs = parsed_experence["experience_min_years"]
+                    exp_max_yrs = parsed_experence["experience_max_years"]
+                    experience_level_keywords = parsed_experence["experience_level_keywords"]
+                    level_keywords = experience_level_keywords
                     job_post_date = await job.locator('span.job-post-day').inner_text() if job.locator('span.job-post-day') else "N/A"
 
                     
@@ -75,7 +80,9 @@ async def scrape_naukri(url, page_number=1):
                         "title": title.strip(),
                         "company": company.strip(),
                         "location": location.strip(),
-                        "experience": experience.strip(),
+                        "experience": exp_str,
+                        "experience_min_years": exp_min_yrs,
+                        "experience_max_years": exp_max_yrs,
                         "post_date": job_post_date.strip(),
                         "link": link,
                     }
@@ -119,8 +126,8 @@ def merge_jsons_into_one(directory, file_prefix, range_start, range_end):
     with open(output_file_path, "w", encoding="utf-8") as output_file:
         json.dump(merged_data, output_file, indent=4)
     
-    for i in range(range_start, range_end + 1):
-        os.remove(f"{directory}/{file_prefix}_{i}.json")
+    # for i in range(range_start, range_end + 1):
+    #     os.remove(f"{directory}/{file_prefix}_{i}.json")
 
 
 
@@ -201,14 +208,14 @@ def clean_and_format_job_description(html_content):
 
     return "".join(markdown_output).strip()
 
-async def main():
-    url = "https://www.naukri.com/software-engineering-jobs"
-    start_page = 1
-    how_many_pages = 5
-    for i in range(start_page, how_many_pages + 1):
+async def main(search_query="Software Engineering Jobs", start_page=1, end_page=5):
+    query_string = search_query.replace(" ", "-").lower().strip()
+    url = f"https://www.naukri.com/{query_string}"
+    
+    for i in range(start_page, end_page + 1):
         await scrape_naukri(url, i)
         print(f"Scraped page {i}")
-    merge_jsons_into_one("data", "naukri_output", start_page, how_many_pages)
+    merge_jsons_into_one("data", "naukri_output", start_page, end_page)
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    merge_jsons_into_one("data", "naukri_output", 1, 20)

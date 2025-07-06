@@ -33,23 +33,35 @@ def run_db_query_tool(input_string_literal: str) -> List[Dict[str, Any]]:
         collection (str): The name of the database collection (e.g., "Jobs").
         
         query (Dict[str, Any]): A dictionary representing the mongoDB client query.
-        It accepts any complex mongoDB query.
+        It accepts any complex mongoDB query. You should create a db query object based on the
+        document structure of the mongoDB document.
         
-        Here is an example of a query dict:
-        The example query dict:
-        {"title" : {"$regex": f'Lead Software Engineer'},
-        "company" : {"$regex": "Wells Fargo"},
-        "location" : {"$regex": "Hyderabad"},
-        "experience" : {"$regex": "1-3 Yrs"},
-        "post_date" : {"$regex": f'1 day ago'}',
-        "key_skills" : {"$in": ["Java", "React", "Kafka"]}
+        Here is an example of a mongoDB Document:
+        {
+            _id: ObjectId('686a718b9ec6ecefa24595d5'),
+            id: 'Ppu2Pt4GhZ8DmKK',
+            title: 'Dot Net Developer - Senior Software Engineer',
+            company: 'Bajaj Financial Securities',
+            location: 'Pune',
+            experience: '4-8 Yrs',
+            experience_min_years: 4,
+            experience_max_years: 8,
+            post_date: '4 days ago',
+            link: 'https://www.naukri.com/job-listings-dot-net-developer-senior-software-engineer-bajaj-financial-securities-pune-4-to-8-years-010725024658',
+            key_skills: [
+            '.Net Core', 'web API',
+            'PYTHON',    'AWS',
+            'redis',     'C#',
+            'Azure',     'Mysql',
+            'linux',     'SQL Server'
+            ],
+            job_description: <The description of the jobs in html format with html tags>
         }
     If no specific query is needed, pass an empty dictionary {}.
 
     Returns:
         List[str]: A list of ids, where each id is a document id from the database
-                            matching the query.Returns an empty list if no results
-                            or an error occurs.
+        matching the query. Returns an empty list if no results or an error occurs.
     """
     
     logger.debug("inputDict", input_string_literal)

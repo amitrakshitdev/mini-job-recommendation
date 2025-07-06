@@ -64,8 +64,8 @@ async def read_root():
     """
     return {"message": "Welcome to the Job Recommendation System API!"}
 
-@app.post("/scrape-jobs")
-async def scrape_jobs():
+@app.post("/scrape-jobs-naukri")
+async def scrape_jobs(req: Request):
     """
     Triggers the naukri scraping process using playright.
     Note: In a production environment, you might want to run this as a scheduled task
@@ -73,8 +73,13 @@ async def scrape_jobs():
     especially for long-running scraping jobs.
     """
     try:
-       await scrap_naukri()
-       return {"message": "Scraping initiated successfully!"}
+        body = await req.json()
+        search_query = body.get("search_query", "Software Engineering Jobs")
+        start_page = body.get("start_page", 1)
+        end_page = body.get("end_page", 5)
+
+        await scrap_naukri(search_query, start_page, end_page)
+        return {"message": "Scraping initiated successfully!"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to initiate scraping: {str(e)}")
     
