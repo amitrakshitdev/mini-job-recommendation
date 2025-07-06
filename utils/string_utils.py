@@ -1,6 +1,11 @@
 import re
 import ast
 from typing import List, Any
+from pypdf import PdfReader
+from docx import Document
+from log.logger import logger
+import io
+from fastapi import UploadFile
 
 def get_list_from_string(string_literal: str) -> List[Any]:
     match = re.search(r'\[.*?\]', string_literal)
@@ -17,6 +22,16 @@ def get_list_from_string(string_literal: str) -> List[Any]:
         return extracted_array
     else:
         return []
+
+def get_json_from_string(string_literal: str) -> str:
+    match = re.search(r"\{(\s|.)*\}", string_literal)
+    if match:
+        content_json = match.group(0)
+    else:
+        return "{{}}"
+    print("converted json",content_json)
+    return content_json
+
 
 def parse_experience_string(exp_str):
     exp_str_lower = exp_str.lower().strip()
@@ -79,3 +94,28 @@ def parse_experience_string(exp_str):
         "experience_max_years": max_yrs,
         "experience_level_keywords": sorted(list(set(level_keywords))) # Use set for uniqueness, sorted for consistency
     }
+
+def extract_text_from_pdf(file: UploadFile) -> str:
+    """Extracts text from a PDF file."""
+    try:
+        reader = PdfReader(io.BytesIO(file.file.read()))
+        text = ""
+        for page in reader.pages:
+            text += page.extract_text() or ""
+        return text
+    except Exception as e:
+        logger.error(f"Error extracting text from PDF: {e}")
+        raise Exception(status_code=500, detail="Could not process PDF file.")
+
+def extract_text_from_docx(file) -> str:
+    """Extracts text from a DOCX file."""
+    try:
+        document = Document(io.BytesIO(file.file.read()))
+        text = ""
+        print("Extracting text from DOCX...", document)
+        for paragraph in document.paragraphs:
+            text += paragraph.text + "\n"
+        return text
+    except Exception as e:
+        logger.error(f"Error extracting text from DOCX: {e}")
+        raise Exception(status_code=500, detail="Could not process DOCX file.")

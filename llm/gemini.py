@@ -1,21 +1,19 @@
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain.chat_models import init_chat_model
-model = init_chat_model("gemini-2.0-flash", model_provider="google_genai")
+import re
 from langchain.tools import tool
 from langchain.agents import AgentExecutor, create_react_agent
 from langchain.prompts import PromptTemplate
 from pydantic import BaseModel
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
-import os
-import requests
+from utils.string_utils import get_json_from_string
 from db.db_client import DatabaseClient
 from log.logger import logger
 import ast
 
 load_dotenv() # This loads the variables from .env into the environment
-
 
 class AgentJobResponse(BaseModel):
     input: str
@@ -66,7 +64,9 @@ def run_db_query_tool(input_string_literal: str) -> List[Dict[str, Any]]:
     
     logger.debug("inputDict", input_string_literal)
     print("Received tool call: inputDict", input_string_literal)
-    extracted_dict = ast.literal_eval(input_string_literal)
+    
+    extracted_json = get_json_from_string(input_string_literal)
+    extracted_dict = ast.literal_eval(extracted_json)
     
     collection = extracted_dict["collection"]
     query = extracted_dict["query"]
@@ -80,14 +80,13 @@ def run_db_query_tool(input_string_literal: str) -> List[Dict[str, Any]]:
             id = ""
             if "_id" in result:
                 id = result["_id"]
-                print("id", id)
+                # print("id", id)
             return id
         processed_result = list(map(process_results, results))
         print("No. of jobs found: ", len(results))
         return processed_result
     except Exception as e:
         return [{"error": f"An unexpected error occurred: {e}"}]
-
 
 class GeminiClient:
     def __init__(self):
@@ -136,6 +135,44 @@ class GeminiClient:
         print(f"\n--- Agent Response: {response} ---")
         return response
 
+    async def analyse_resume_text_and_fetch_jobs(self, resume_text: str) -> AgentJobResponse:
+        tools = [run_db_query_tool]
+        # The ReAct agent prompt requires specific variables: `tools`, `tool_names`, 
+        # and `agent_scratchpad`. It also expects a specific format for the agent's
+        # reasoning process (Thought, Action, Action Input, Observation).
+        prompt = PromptTemplate.from_template("""
+        You are an expert at extracting key job-related information from a user's resume text to find relevant job postings and with the key information of the resume.
+        Your task is to analyze the resume text data given by the user, identify the key job-related details, and use the available tools to query a database and then find relevant jobs for the user.
+
+        You have access to the following tools:
+        {tools}
+
+        Use the following format:
+
+        Question: The resume text data given by the user as input about the job they are looking for.
+        Thought: You should always think about what to do. Analyze the text of the resume to extract details like job title, location, skills, company, and experience. Then, decide to use the 'run_db_query_tool' to search the database and Retrieve relevant Jobs.
+        Action: The action to take, should be one of [{tool_names}].
+        Action Input: You are calling an internal tool, so do NOT create any markdown literal text. The input to the action should be a Dictionary object with 'collection' and 'query' keys. The query should NOT be case sensitive.
+        
+        Observation: The result of the action from the database.
+        ... (this Thought/Action/Action Input/Observation can repeat 6 times if you need to refine the search)
+        Thought: I now have the final list of jobs.
+
+        Final Answer: The final answer should be the direct output from the tool and nothing extra.
+        
+        - If the user's query is related to a job search, you must extract the relevant information and call the 'run_db_query_tool' tool to get data from the database.
+        - If the query is ambiguous or lacks specific details for a particular field, you should construct the query with the available information.
+        - If the user's query is not related to a job search, you must respond with the message: "I can only help with job-related queries."
+
+        Begin!
+
+        Question: {input}
+        Thought:{agent_scratchpad}""")
+        agent = create_react_agent(self.llm, tools, prompt=prompt)
+        agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True, handle_parsing_errors=True)
+        response = await agent_executor.ainvoke({"input": resume_text})
+        print(f"\n--- Agent Response: {response} ---")
+        return response
 
 # gemini_client = GeminiClient()
 # query = "I am looking for software engineering jobs in kolkata of java spring boot a mid senior level job"

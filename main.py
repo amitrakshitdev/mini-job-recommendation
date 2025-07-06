@@ -13,9 +13,7 @@ from scrapers.naukri_scraper import main as scrap_naukri
 from llm.gemini import GeminiClient
 from utils.string_utils import get_list_from_string
 from bson import ObjectId
-
-
-
+from utils.string_utils import extract_text_from_pdf, extract_text_from_docx
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -142,26 +140,35 @@ async def upload_resume(file: UploadFile = File(...)):
     """
     Uploads a resume (PDF/DOCX) and recommends jobs based on its content.
     """
-    if file.content_type not in ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"]:
-        raise HTTPException(status_code=400, detail="Only PDF and DOCX files are allowed.")
+    if file.content_type not in ["application/pdf",
+                                #  "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                                 ]:
+        raise HTTPException(status_code=400, detail="Only PDF files are allowed.")
 
     file_location = f"/tmp/{file.filename}" # Temporary storage for the uploaded file
-    try:
-        with open(file_location, "wb") as f:
-            f.write(await file.read())
+    os.makedirs(os.path.dirname(file_location), exist_ok=True)
 
-        # Placeholder for actual logic:
-        # 1. Use Document Processing module to extract text from 'file_location'.
-        # 2. Use NLP/LLM module to parse resume text, extract skills, and generate resume embedding.
-        # 3. Perform vector similarity search using resume embedding against job embeddings.
-        # 4. Return recommended jobs.
+    try:
+        if file.content_type == "application/pdf":
+            text = extract_text_from_pdf(file)
+        else:
+            text = extract_text_from_docx(file)
+        response = await gemini.analyse_resume_text_and_fetch_jobs(text)
         print(f"Received resume: {file.filename} ({file.content_type})")
-        # Mock recommendation for demonstration
-        mock_recommended_jobs = [
-            JobPost(id="5", title="Cloud Engineer", company="Cloud Solutions", location="Pune", description="Manage cloud infrastructure.", url="http://example.com/job5"),
-            JobPost(id="6", title="DevOps Specialist", company="Automate Inc", location="Chennai", description="Implement CI/CD pipelines.", url="http://example.com/job6")
-        ]
-        return {"message": f"Resume '{file.filename}' uploaded and processed successfully!", "recommended_jobs": mock_recommended_jobs}
+        output_string = ''
+        if "output" in response:
+            output_string = response["output"]
+        jobs_id_list = get_list_from_string(output_string)
+        jobs_object_id_list = list(map(lambda id: ObjectId(id), jobs_id_list))
+        jobs_data = db_client.run_query("Jobs", {"_id": {"$in": jobs_object_id_list}})
+
+        response = {"data": jobs_data,
+                    "count": len(jobs_id_list)}
+        if len(jobs_id_list) == 0:
+            response = {"data": [], 
+                        "count": 0, 
+                        "message" : "No jobs found for this resume."}
+        return response
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to process resume: {str(e)}")
     finally:
