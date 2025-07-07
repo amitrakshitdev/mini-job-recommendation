@@ -16,7 +16,7 @@ To do so run ```python seed_data.py``` _Note: The mongoDB database shoulde be ru
 8. Now finally run ```python start-server.py``` to start the server at port **3015**.
 
 ## Sample inputs (From postman)
-1. From postman hit the following url: ```http://localhost:3015/user-query``` with a **json** payload of
+1. From postman hit the following url with a **POST** request: ```http://localhost:3015/user-query``` with a **json** payload of
 ```
 {
     "query" : "Find me software developer jobs in bengaluru"
@@ -62,7 +62,7 @@ The output should look like the following:
     "count": 6
 }
 ```
-2. Hit the following endpoint as ```http://localhost:3015/resume/upload``` with a resume.pdf file attached as a form-data payload. A sample resume can be found inside ```data/resume-sample``` directory.
+2. Send a **POST** requst to the following endpoint ```http://localhost:3015/resume/upload``` with a resume.pdf file attached as a form-data payload. A sample resume can be found inside ```data/resume-sample``` directory.
 It will return something like the following.
 ```json
 {
@@ -137,12 +137,151 @@ It will return something like the following.
     "count": 3
 }
 ```
-
+3. Send a **GET** requst to the following endpoint ```http://localhost:3015/jobs/recommend-similar/686ab65d43d4d6cd3ff292fc``` to find similar jobs from the database. The params being the id of the job.
+The output should look like the following.
+```json
+    {
+    "data": [
+        {
+            "_id": "686ab65d43d4d6cd3ff292fc",
+            "id": "bujhsos05Mw7LpP",
+            "title": "Software Engineer (Java)",
+            "company": "NICE",
+            "location": "Hybrid - Pune",
+            "experience": "2-4 Yrs",
+            "experience_min_years": 2,
+            "experience_max_years": 4,
+            "post_date": "1 day ago",
+            "link": "https://www.naukri.com/job-listings-software-engineer-java-nice-interactive-pune-2-to-4-years-050725016077",
+            "key_skills": [
+                "code versioning tools",
+                "hibernate",
+                "microservices",
+                "cloud",
+                "spring",
+                "coding",
+                "java",
+                "computer science",
+                "flex",
+                "design",
+                "product development",
+                "english",
+                "j2ee",
+                "software engineering",
+                "code review",
+                "html",
+                "software development",
+                "engineering",
+                "nice",
+                "javascript",
+                "spring boot",
+                "microservices development",
+                "scrum",
+                "agile",
+                "aws"
+            ],
+            "job_description": "<p></p><p><strong>So, what’s the role all about?</strong></p><p>We are looking for are developer with strong experience in design and coding, having a good understanding of developing Microservice application on cloud. Also, the person should have a keen focus on code quality, being able to write unit tests, do code reviews with a specific focus on security, and assisting, training, and coaching of other developers in writing secure software.</p><p><strong>How will you make an impact?</strong><strong>&nbsp;</strong></p><ul> <li>Deliver high quality, sustainable, maintainable code.Introduce security features and fixes in existing code base.</li> <li>Writing secure code and harden existing features.</li> <li>Participate in reviewing design and code (pull requests) for other team members – again with a secure code focus.</li> <li>Work as a member of an agile team responsible for product development and delivery.</li> <li>Adhere to agile development principles while following and improving all aspects of the scrum process.</li> <li>Follow established department procedures, policies, and processes.</li> <li>Adheres to the company Code of Ethics and CxOne policies and procedures.</li> <li>Excellent English and experience in working in international teams are required.</li></ul><p><strong>Have you got what it takes? </strong></p><ul> <li>BS or MS in Computer Science or related degree</li> <li>2+ years’ experience in software development</li> <li>Strong knowledge of Java.</li> <li>Strong knowledge of working and developing Microservices.</li> <li>Experience with AWS</li> <li>Extensive experience refactoring code and developing solutions with a minimum risk of regression.</li></ul><p><strong>What’s in it for you?</strong></p><p>Join an ever-growing, market disrupting, global company where the teams – comprised of the best of the best – work in a fast-paced, collaborative, and creative environment! As the market leader, every day at NICE is a chance to learn and grow, and there are endless internal career opportunities across multiple roles, disciplines, domains, and locations. If you are passionate, innovative, and excited to constantly raise the bar, you may just be our next NICEr!</p><p><strong>Enjoy NICE-FLEX! </strong></p><p>At NICE, we work according to the NICE-FLEX hybrid model, which enables maximum flexibility: 2 days working from the office and 3 days of remote work, each week. Naturally, office days focus on face-to-face meetings, where teamwork and collaborative thinking generate innovation, new ideas, and a vibrant, interactive atmosphere.</p><p><strong>Reporting into: </strong>Tech Manager, Engineering, CX<br><strong>Role Type: </strong>Individual Contributor</p><p>&nbsp;</p><p></p>"
+        },
+        {
+            "_id": "686ab65d43d4d6cd3ff29317",
+            "id": "qnyJRA5gcUUtG73",
+            "title": "Software Engineer (Dot Net, AWS)",
+            "company": "NICE",
+            "location": "Hybrid - Pune",
+            "experience": "2-4 Yrs",
+            "experience_min_years": 2,
+            "experience_max_years": 4,
+            "post_date": "6 days ago",
+            "link": "https://www.naukri.com/job-listings-software-engineer-dot-net-aws-nice-interactive-pune-2-to-4-years-300625007413",
+            "key_skills": [
+                "c#",
+                "continuous integration",
+                "cd",
+                "development",
+                "process",
+                "analytical",
+                "entity framework",
+                "ci/cd",
+                "relational databases",
+                "ado",
+                "azure devops",
+                "sql",
+                "microservices",
+                "git",
+                "application",
+                ".net core",
+                "collaboration",
+                "design patterns",
+                "writing",
+                ".net",
+                "troubleshooting",
+                "software engineering",
+                "aws",
+                "communication skills"
+            ],
+            "job_description": "<p><strong>So, what’s the role all about?</strong></p><p>We are looking for a Software Engineer to join our growing team of highly skilled engineers working on a variety of applications and services to support our omni-channel, proactive communication platform. You will be working in multidisciplinary team with other professionals delivering high quality and secure software within an Agile delivery framework. The role will be based in Pune, India. Extensive collaboration and communication with UK and US based teams will be a key part of the job, so excellent communication skills are critical.&nbsp;</p><p><strong>How will you make an impact?</strong><strong> </strong></p><ul> <li>Write, test and maintain code which adheres to internal guidelines and industry best practices.</li> <li>Ensure applications are built to modern security standards.</li> <li>Write reusable code and libraries.</li> <li>Write automated tests to ensure code has the appropriate level of test coverage.</li> <li>Take part in code reviews (as reviewer and reviewee).&nbsp;</li> <li>Participate and contribute in team Scrum ceremonies.</li> <li>Create and maintain the required documentation.</li> <li>Responsible for defined tasks of low to medium complexity</li></ul><p><strong>Have you got what it takes? </strong></p><ul> <li>At least 3 years of software engineering experience.&nbsp;</li> <li>Strong C# experience including OOP and application of modern design patterns (2+ years).</li> <li>Strong in NetCore , Microservices,- EF/ Ado.Net</li> <li>Experience designing and building web-based products using the .NET Core framework.</li> <li>Experience working with public cloud platforms like AWS (preferred), Azure, and GCP.</li> <li>Strong relational database experience with proficiency in writing and troubleshooting SQL (preferably MySQL).</li> <li>Proficient in writing testable and reusable code and developing scalable applications.</li> <li>Proficient working with Git, Azure DevOps, CI/CD and other development process tooling.</li> <li>Excellent communication skills.</li> <li>Strong analytical and problem-solving skills.</li></ul><p><strong>What’s in it for you?</strong></p><p>Join an ever-growing, market disrupting, global company where the teams – comprised of the best of the best – work in a fast-paced, collaborative, and creative environment! As the market leader, every day at NICE is a chance to learn and grow, and there are endless internal career opportunities across multiple roles, disciplines, domains, and locations. If you are passionate, innovative, and excited to constantly raise the bar, you may just be our next NICEr!</p><p><strong>&nbsp;</strong></p><p><strong>Enjoy NICE-FLEX! </strong></p><p>At NICE, we work according to the NICE-FLEX hybrid model, which enables maximum flexibility: 2 days working from the office and 3 days of remote work, each week. Naturally, office days focus on face-to-face meetings, where teamwork and collaborative thinking generate innovation, new ideas, and a vibrant, interactive atmosphere.</p><p><strong><br>Reporting into: </strong>Tech Manager, Engineering, CX<br><strong>Role Type: </strong>Individual Contributor</p><p>&nbsp;</p>"
+        },
+        {
+            "_id": "686ab65d43d4d6cd3ff29414",
+            "id": "WbTelvWRid5TaSX",
+            "title": "Software Engineer (Java, Angular)",
+            "company": "NICE",
+            "location": "Hybrid - Pune",
+            "experience": "2-4 Yrs",
+            "experience_min_years": 2,
+            "experience_max_years": 4,
+            "post_date": "3 weeks ago",
+            "link": "https://www.naukri.com/job-listings-software-engineer-java-angular-nice-interactive-pune-2-to-4-years-130625028747",
+            "key_skills": [
+                "algorithms",
+                "continuous integration",
+                "fcc",
+                "hibernate",
+                "sql",
+                "spring",
+                "java",
+                "git",
+                "gcp",
+                "design patterns",
+                "j2ee",
+                "jenkins",
+                "data structures",
+                "big data",
+                "etl",
+                "perforce",
+                "jira",
+                "communication skills",
+                "annotation",
+                "restful web",
+                "software development",
+                "microsoft azure",
+                "nosql",
+                "angular",
+                "tableau",
+                "ooad",
+                "agile",
+                "ioc",
+                "aws",
+                "etl process"
+            ],
+            "job_description": "<p>&nbsp;</p><p>&nbsp;</p><p><strong>So, what’s the role all about?</strong></p><p>A Java fullstack software developer is responsible for both frontend and backend development using Java-based technologies. Here's an overview of what you might expect in a job description for this role.</p><p><strong>How will you make an impact?</strong></p><ul> <li>Investigate, measure, and report on client's risk of suspicious or fraudulent financial activity.</li> <li>Follow SOPs as per anti-money laundering laws and carry out investigations. Identify areas for improving alert investigation process.</li> <li>Collaborate with auditors and regulators to minimize money-laundering risks to client’s business.</li> <li>Report and make notes and records of any suspicious transactions or activities in an efficient and timely manner.</li> <li>Proactive work on investigations within SLA and be a strong performer in the team</li> <li>Be well versed with FCC investigator solutions including Actimize (if possible)</li> <li>Work within service levels, KPI’s and in line with the regulatory best practice.</li> <li>Be up to date with trainings conducted for the investigation team, including workshops, conferences, and any certification or refresher training as required.</li> <li>Review risk and complete risk assessments as required.</li> <li>Maintain and update your knowledge of anti-money laundering compliance rules, regulations, laws, and best practices.</li> <li>Take part in and lead anti-money laundering compliance training on identifying suspicious activity to other team members.</li> <li>Indirect/direct consulting to clients.</li> <li>Provide domain expertise support during pre/post service sales process.</li></ul><p><strong>Have you got what it takes?</strong></p><ul> <li>Bachelor/Master of Engineering Degree in Computer Science, Electronic Engineering or equivalent from reputed institute</li> <li>2+ years of software development experience</li> <li>At least 2+ years of working experience in Core Java, proficient with Java algorithms and data structures</li> <li>Worked in high performance, highly available and scalable systems</li> <li>Strong experience with J2EE, Spring Framework, IOC, annotations</li> <li>Experience in any object-relational mapping (e.g. Hibernate)</li> <li>Strong knowledge of OOAD and Design patterns</li> <li>Development experience building solutions that leverage SQL and NoSQL databases</li> <li>Strong Development experience creating RESTful Web APIs</li> <li>Knowledge of BIG DATA and ETL Concepts (or BI tool like Tableau) will be added advantage</li> <li>Experience designing and developing scalable multi-tenant SaaS-based solutions</li> <li>Experience with public cloud infrastructure and technologies such as AWS/Azure/GCP etc</li> <li>Development experience in Angular</li> <li>Experience working in and driving Continuous Integration and Delivery practices using industry standard tools such as Jenkins</li> <li>Experience working in an Agile methodology development environment and using work item management tools like JIRA</li> <li>Experience with version control tools – GIT, Perforce</li> <li>Ability to work independently and collaboratively, good communication skill</li> <li>Bring a culture of Innovation to the job</li> <li>Ability to work under high pressure</li> <li>High attention to details and accuracy</li> <li>Experience with public cloud infrastructure and technologies such as AWS/Azure/GCP etc</li> <li>Experience working in and driving Continuous Integration and Delivery practices using industry standard tools such as Jenkins.</li> <li>Ability to work independently and collaboratively, good communication skill.</li> <li>Able to resolve problems of moderate scope which requires an analysis based on a review of a variety of factors.</li></ul><p><strong>You will have an advantage if you also have:</strong></p><ul> <li>Experience in Big data</li></ul><p><strong>What’s in it for you?</strong></p><p>Join an ever-growing, market disrupting, global company where the teams – comprised of the best of the best – work in a fast-paced, collaborative, and creative environment! As the market leader, every day at NiCE is a chance to learn and grow, and there are endless internal career opportunities across multiple roles, disciplines, domains, and locations. If you are passionate, innovative, and excited to constantly raise the bar, you may just be our next Nicer!</p><p><strong>Enjoy NiCE-FLEX! </strong></p><p>At NiCE, we work according to the NiCE-FLEX hybrid model, which enables maximum flexibility: 2 days working from the office and 3 days of remote work, each week. Naturally, office days focus on face-to-face meetings, where teamwork and collaborative thinking generate innovation, new ideas, and a vibrant, interactive atmosphere.</p><p><strong>Requisition ID: 7241<br>Reporting into: </strong>Tech Manager<br><strong>Role Type: </strong>Individual Contributor</p><p>&nbsp;</p>"
+        }
+    ],
+    "count": 3
+}
+```
+4. To scrape data from Naukri.com you may send a HTTP **POST** request to the following endpoint ```http://localhost:3015/scrape-jobs-naukri``` with a **json** payload of 
+```json
+{
+    "search_query" : "Engineering Jobs",
+    "start_page": 1,
+    "end_page": 2
+}
+```
+The data should be stored at ```data/naukri_output_merged.json``` location.
 
 ## ! Limitation
-1. The Docx format resume is not supported yet.
-2. Couldn't scrape linkedin data due to security reasons.
+1. Couldn't scrape linkedin data due to security reasons.
 3. The Job scoring mechanism is there but not fully functional so not implemented.
-4. The similar job recommendation is yet to be implemented.
 
 Thank you. Will keep on improving and implementing the other things.
