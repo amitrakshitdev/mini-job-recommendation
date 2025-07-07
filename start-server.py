@@ -2,7 +2,8 @@ from uvicorn.config import Config
 from uvicorn.server import Server
 from fastapi.middleware.cors import CORSMiddleware
 from main import app
-from log.logger import logger
+from log.logger_config import configured_logger
+from loguru import logger
 
 
 app.add_middleware(

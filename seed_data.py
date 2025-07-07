@@ -21,4 +21,4 @@ else:
     collection.insert_one(data)
 
 count = len(collection.find({}).to_list())
-print(f"{count} no. of data entered.")
+logger.info(f"{count} no. of data entered.")

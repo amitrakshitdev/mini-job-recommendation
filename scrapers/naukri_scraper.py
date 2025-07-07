@@ -11,7 +11,8 @@ from utils.string_utils import parse_experience_string
 curr_dir = Path(__file__).resolve().parent.parent / "user_data"
 
 sys.path.append("../")
-# from log.logger import logger
+from log.logger_config import configured_logger
+from loguru import logger
 
 async def __get_job_description__(browser, job_data, index):
     page = await browser.new_page()
@@ -90,9 +91,9 @@ async def scrape_naukri(url, page_number=1):
                     job_data.append(job_details)
 
                 except Exception as e:
-                    print(f"Error scraping job: {e}")
+                    logger.info(f"Error scraping job: {e}")
                     # You might want to log the HTML of the failed job for debugging
-                    # print(await job.inner_html())
+                    # logger.info(await job.inner_html())
 
             # Open each link and get job description inner html
             get_job_des_coroutines = [__get_job_description__(browser, job_data, index) for index, job in enumerate(job_data)]
@@ -109,7 +110,7 @@ async def scrape_naukri(url, page_number=1):
 
 
         except Exception as e:
-            print(f"An error occurred: {e}")
+            logger.info(f"An error occurred: {e}")
         finally:
             await browser.close()
 
@@ -214,7 +215,7 @@ async def main(search_query="Software Engineering Jobs", start_page=1, end_page=
     
     for i in range(start_page, end_page + 1):
         await scrape_naukri(url, i)
-        print(f"Scraped page {i}")
+        logger.info(f"Scraped page {i}")
     merge_jsons_into_one("data", "naukri_output", start_page, end_page)
 
 if __name__ == '__main__':

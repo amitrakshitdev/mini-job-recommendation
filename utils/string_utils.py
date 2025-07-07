@@ -3,12 +3,13 @@ import ast
 from typing import List, Any
 from pypdf import PdfReader
 from docx import Document
-from log.logger import logger
+from log.logger_config import configured_logger
+from loguru import logger
 import io
 from fastapi import UploadFile
 
 def get_list_from_string(string_literal: str) -> List[Any]:
-    match = re.search(r'\[.*?\]', string_literal)
+    match = re.search(r'\[(\s|.)*\]', string_literal)
 
     if match:
         # 2. Extract the matched string (which is the list as a string)
@@ -29,7 +30,7 @@ def get_json_from_string(string_literal: str) -> str:
         content_json = match.group(0)
     else:
         return "{{}}"
-    print("converted json",content_json)
+    logger.info("converted json",content_json)
     return content_json
 
 
@@ -112,7 +113,7 @@ def extract_text_from_docx(file) -> str:
     try:
         document = Document(io.BytesIO(file.file.read()))
         text = ""
-        print("Extracting text from DOCX...", document)
+        logger.info("Extracting text from DOCX...", document)
         for paragraph in document.paragraphs:
             text += paragraph.text + "\n"
         return text

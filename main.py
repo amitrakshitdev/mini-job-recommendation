@@ -3,7 +3,7 @@
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Request
 from pydantic import BaseModel
-import subprocess
+import json
 import os
 import asyncio
 from typing import List, Dict, Any
@@ -14,6 +14,8 @@ from llm.gemini import GeminiClient
 from utils.string_utils import get_list_from_string
 from bson import ObjectId
 from utils.string_utils import extract_text_from_pdf, extract_text_from_docx
+from log.logger_config import configured_logger
+from loguru import logger
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -52,7 +54,8 @@ class RecommendationResponse(BaseModel):
 # and initialize connections here or via dependency injection.
 # For now, these are just placeholders.
 db_client = DatabaseClient(db_name="JobReco")
-gemini = GeminiClient()
+model_name = "gemini-1.5-flash-8b-latest"
+gemini = GeminiClient(model_name)
 # --- API Endpoints ---
 
 @app.get("/")
@@ -84,7 +87,7 @@ async def scrape_jobs(req: Request):
 @app.post("/user-query")
 async def user_query(request: Request):
     body = await request.json()
-    print(f"Received user query:", body)
+    logger.info(f"Received user query:", body)
     response = await gemini.get_jobs_by_agent(body["query"])
     output_string = ''
     if "output" in response:
@@ -92,8 +95,8 @@ async def user_query(request: Request):
     jobs_id_list = get_list_from_string(output_string)
     jobs_object_id_list = list(map(lambda id: ObjectId(id), jobs_id_list))
     jobs_data = db_client.run_query("Jobs", {"_id": {"$in": jobs_object_id_list}})
-    response = {"data": jobs_data,
-            "count": len(jobs_data)}
+    response = {"count" : len(jobs_data),
+                "data": jobs_data}
     if len(jobs_id_list) == 0:
         response = {"data": [], 
                     "count": 0, 
@@ -106,7 +109,7 @@ async def search_jobs(body: JobQueryBody) -> List[Any]:
     """
     Searches for jobs based on a user query using the LLM/NLP module and vector similarity.
     """ 
-    print(f"Searching for jobs with query: {body}")
+    logger.info(f"Searching for jobs with query: {body}")
     query = {
         "title": body.title,
         "company": body.company,
@@ -118,22 +121,31 @@ async def search_jobs(body: JobQueryBody) -> List[Any]:
     search_results: List[JobDocument] = db_client.run_query("Jobs", query)
     return search_results
 
-@app.post("/jobs/{job_id}/recommend-similar")
-async def recommend_similar_jobs(job_id: str) -> RecommendationResponse:
+@app.get("/jobs/recommend-similar/{job_id}")
+async def recommend_similar_jobs(job_id: str):
     """
     Recommends similar jobs based on a given job ID.
     """
-    # Placeholder for actual logic:
-    # 1. Retrieve the embedding of the job with 'job_id'.
-    # 2. Perform vector similarity search to find other similar job embeddings.
-    # 3. Retrieve details of recommended jobs.
-    print(f"Recommending similar jobs for job ID: {job_id}")
-    # Mock data for demonstration
-    mock_recommended_jobs = [
-        JobPost(id="3", title="Senior Software Engineer", company="Innovate Solutions", location="Hyderabad", description="Lead software development.", url="http://example.com/job3"),
-        JobPost(id="4", title="Backend Developer", company="CodeWorks", location="Bangalore", description="Build robust backend systems.", url="http://example.com/job4")
-    ]
-    return RecommendationResponse(recommended_jobs=mock_recommended_jobs)
+    job_data = db_client.run_query("Jobs", {"_id": ObjectId(job_id)})
+    if len(job_data) == 0:
+        raise HTTPException(status_code=404, detail="Job not found")
+    else:
+        job = job_data[0]
+        del job["job_description"]
+    llm_response = await gemini.get_similar_jobs(job)
+    output_string = ''
+    if "output" in llm_response:
+        output_string = llm_response["output"]
+    jobs_id_list = get_list_from_string(output_string)
+    jobs_object_id_list = list(map(lambda id: ObjectId(id), jobs_id_list))
+    jobs_data = db_client.run_query("Jobs", {"_id": {"$in": jobs_object_id_list}})
+    response = {"data": jobs_data,
+                    "count": len(jobs_id_list)}
+    if len(jobs_data) == 0:
+        response = {"data": [], 
+                        "count": 0, 
+                        "message" : "No similar jobs found."}
+    return response
 
 @app.post("/resume/upload")
 async def upload_resume(file: UploadFile = File(...)):
@@ -150,11 +162,12 @@ async def upload_resume(file: UploadFile = File(...)):
 
     try:
         if file.content_type == "application/pdf":
-            text = extract_text_from_pdf(file)
+            resume_text = extract_text_from_pdf(file)
         else:
-            text = extract_text_from_docx(file)
-        response = await gemini.analyse_resume_text_and_fetch_jobs(text)
-        print(f"Received resume: {file.filename} ({file.content_type})")
+            resume_text = extract_text_from_docx(file)
+        # resume_key_info = await gemini.extract_key_info_from_resume(resume_text)
+        response = await gemini.analyse_resume_text_and_fetch_jobs(resume_text)
+        logger.info(f"Received resume: {file.filename} ({file.content_type})")
         output_string = ''
         if "output" in response:
             output_string = response["output"]
@@ -164,7 +177,7 @@ async def upload_resume(file: UploadFile = File(...)):
 
         response = {"data": jobs_data,
                     "count": len(jobs_id_list)}
-        if len(jobs_id_list) == 0:
+        if len(jobs_data) == 0:
             response = {"data": [], 
                         "count": 0, 
                         "message" : "No jobs found for this resume."}
@@ -176,9 +189,33 @@ async def upload_resume(file: UploadFile = File(...)):
         if os.path.exists(file_location):
             os.remove(file_location)
 
-# To run this FastAPI app locally (for testing without Docker yet):
-# 1. Make sure you have FastAPI and Uvicorn installed:
-#    pip install fastapi uvicorn python-multipart
-# 2. Run from your terminal in the directory containing main.py:
-#    uvicorn main:app --reload --host 0.0.0.0 --port 8000
-# 3. Access the API documentation at http://127.0.0.1:8000/docs
+@app.post("/resume/upload-key-info")
+async def upload_resume_key_info(file: UploadFile = File(...)):
+    """
+    Uploads a resume (PDF/DOCX) and recommends jobs based on its content.
+    """
+    if file.content_type not in ["application/pdf",
+                                #  "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                                 ]:
+        raise HTTPException(status_code=400, detail="Only PDF files are allowed.")
+
+    file_location = f"/tmp/{file.filename}" # Temporary storage for the uploaded file
+    os.makedirs(os.path.dirname(file_location), exist_ok=True)
+
+    try:
+        logger.info(f"Received resume: {file.filename} ({file.content_type})")
+        if file.content_type == "application/pdf":
+            text = extract_text_from_pdf(file)
+        else:
+            text = extract_text_from_docx(file)
+        response = await gemini.extract_key_info_from_resume(text)
+        logger.info(response)
+        return response
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to process resume: {str(e)}")
+    finally:
+        # Clean up the temporary file
+        if os.path.exists(file_location):
+            os.remove(file_location)
+
+

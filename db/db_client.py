@@ -4,7 +4,8 @@ from pymongo import MongoClient
 from pymongo.collection import Collection
 from pymongo.errors import ConnectionFailure
 from db.jobs_schema import JobDocument
-from log.logger import logger
+from log.logger_config import configured_logger
+from loguru import logger
 class DatabaseClient:
     """
     A generic client for interacting with a MongoDB database.
@@ -43,11 +44,11 @@ class DatabaseClient:
             bool: True if insertion was successful, False otherwise.
         """
         if self.db is None:
-            print("❌ Cannot insert data, no database connection.")
+            logger.info("❌ Cannot insert data, no database connection.")
             return False
         
         collection = self.db[collection_name]
-        print(f"\n Inserting data from '{file_path}' into collection '{collection_name}'...")
+        logger.info(f"\n Inserting data from '{file_path}' into collection '{collection_name}'...")
         try:
             with open(file_path, 'r') as f:
                 data = json.load(f)
@@ -59,13 +60,13 @@ class DatabaseClient:
             else:
                 collection.insert_one(data)
             
-            print("✅ Data inserted successfully.")
+            logger.info("✅ Data inserted successfully.")
             return True
         except FileNotFoundError:
-            print(f"❌ Error: The file '{file_path}' was not found.")
+            logger.info(f"❌ Error: The file '{file_path}' was not found.")
             return False
         except Exception as e:
-            print(f"❌ An error occurred during insertion: {e}")
+            logger.info(f"❌ An error occurred during insertion: {e}")
             return False
 
     def run_query(self, collection_name, query={}, DocumentType=JobDocument):
@@ -80,12 +81,12 @@ class DatabaseClient:
             list: A list of documents matching the query, or an empty list if an error occurs.
         """
         if self.db is None:
-            print("❌ Cannot run query, no database connection.")
+            logger.info("❌ Cannot run query, no database connection.")
             return []
         collection = self.db.get_collection(collection_name)
 
-        print("collection name :", collection, type(collection))
-        print(f"\n🔍 Running query on '{collection_name}': {query}")
+        # logger.info("collection name :", collection, type(collection))
+        logger.info(f"\n🔍 Running query on '{collection_name}'")
         try:
             query_results = collection.find(query).to_list()
             def process_results(result):
@@ -93,10 +94,10 @@ class DatabaseClient:
                     result["_id"] = str(result["_id"])
                 return result
             processed_result = list(map(process_results, query_results))
-            print("✅ Query executed successfully.")
+            logger.info("✅ Query executed successfully.")
             return processed_result
         except Exception as e:
-            print(f"❌ An error occurred while running the query: {e}")
+            logger.info(f"❌ An error occurred while running the query: {e}")
             return []
 
     def close_connection(self):
@@ -105,13 +106,13 @@ class DatabaseClient:
         """
         if self.client:
             self.client.close()
-            print("\n🔌 Connection to MongoDB closed.")
+            logger.info("\n🔌 Connection to MongoDB closed.")
             
             
 if __name__ == "__main__":
     db_client = DatabaseClient(db_name="JobReco")
     results = db_client.run_query("Jobs", {"title": {"$regex": "Developer"}})
-    print(results)
-    print(len(results))
+    logger.info(results)
+    logger.info(len(results))
 
     db_client.close_connection()
